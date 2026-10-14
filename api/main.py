@@ -46,6 +46,11 @@ async def dashboard():
     return FileResponse(STATIC / "dashboard.html")
 
 
+@app.get("/state")
+async def state_page():
+    return FileResponse(STATIC / "state.html")
+
+
 @app.get("/events")
 async def events(request: Request):
     async def stream():

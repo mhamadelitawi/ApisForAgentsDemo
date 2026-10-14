@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from agent.scenes import BY_ID, SCENES
 
-from .state import TOKEN_ADMIN, state
+from .state import CUSTOMERS, TOKEN_ADMIN, state
 
 router = APIRouter(prefix="/admin")
 
@@ -26,6 +26,7 @@ class Settings(BaseModel):
 async def get_state():
     return {
         "settings": state.public_settings(),
+        "customers": list(CUSTOMERS.values()),
         "orders": list(state.orders.values()),
         "ledger": state.ledger,
         "audit": state.audit,
