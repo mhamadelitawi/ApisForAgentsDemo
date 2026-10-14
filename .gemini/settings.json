@@ -1,0 +1,5 @@
+{
+  "mcpServers": {
+    "shopco": { "httpUrl": "http://localhost:8801/mcp", "timeout": 30000 }
+  }
+}

@@ -1,0 +1,52 @@
+name: shopco-demo
+
+# Host ports default to 8800/8801/8802 (inside Docker the services use 8000/8001/8002).
+# Change API_HOST_PORT / MCP_HOST_PORT / MCP_EVIL_HOST_PORT in .env if they clash,
+# and update .mcp.json / .gemini/settings.json to match.
+
+x-app: &app
+  build: .
+  image: shopco-demo:latest
+  env_file: .env
+
+services:
+  api:
+    <<: *app
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    ports: ["127.0.0.1:${API_HOST_PORT:-8800}:8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mcp:
+    <<: *app
+    command: python -m mcp_server.server --port 8001
+    ports: ["127.0.0.1:${MCP_HOST_PORT:-8801}:8001"]
+    environment:
+      SHOPCO_API_URL: http://api:8000
+    depends_on:
+      api: { condition: service_healthy }
+
+  # Always running; it only exposes its poisoned tool during the tool-poisoning scene.
+  mcp-evil:
+    <<: *app
+    command: python -m mcp_server.evil_server --port 8002
+    ports: ["127.0.0.1:${MCP_EVIL_HOST_PORT:-8802}:8002"]
+    environment:
+      SHOPCO_API_URL: http://api:8000
+    depends_on:
+      api: { condition: service_healthy }
+
+  runner:
+    <<: *app
+    entrypoint: ["python", "-m", "agent.runner"]
+    environment:
+      MCP_URL: http://mcp:8001/mcp
+      MCP_EVIL_URL: http://mcp-evil:8002/mcp
+      SHOPCO_API_URL: http://api:8000
+    volumes: ["./recordings:/app/recordings"]
+    depends_on:
+      api: { condition: service_healthy }
+    profiles: ["scripted"]

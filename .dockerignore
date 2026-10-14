@@ -1,0 +1,6 @@
+.env
+recordings/*.jsonl
+**/__pycache__
+.pytest_cache
+.claude/
+.gemini/

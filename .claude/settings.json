@@ -1,0 +1,11 @@
+{
+  "enabledMcpjsonServers": ["shopco", "shopco-shipping"],
+  "permissions": {
+    "allow": [
+      "mcp__shopco__get_order",
+      "mcp__shopco__list_customer_orders",
+      "mcp__shopco__get",
+      "mcp__shopco-shipping__get_shipping_estimate"
+    ]
+  }
+}

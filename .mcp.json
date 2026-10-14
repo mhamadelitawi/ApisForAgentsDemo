@@ -1,0 +1,6 @@
+{
+  "mcpServers": {
+    "shopco": { "type": "http", "url": "http://localhost:8801/mcp" },
+    "shopco-shipping": { "type": "http", "url": "http://localhost:8802/mcp" }
+  }
+}

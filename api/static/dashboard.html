@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShopCo Agent Demo</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%232f6fde%22/%3E%3Ctext x=%228%22 y=%2212%22 font-size=%2211%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22sans-serif%22%3ES%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #14171c; --muted: #5b6573; --line: #dde1e7;
+    --accent: #2f6fde; --ok: #16803c; --ok-bg: #e5f5ea; --bad: #c62828; --bad-bg: #fdecec;
+    --warn: #a35a00; --warn-bg: #fff3df; --hid: #8a2be2; --hid-bg: #f1e6ff; --code: #f0f2f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216; --panel: #171b21; --ink: #e9edf2; --muted: #93a0b0; --line: #2a313b;
+      --accent: #6aa0ff; --ok: #4ad07a; --ok-bg: #12301d; --bad: #ff6b6b; --bad-bg: #3a1618;
+      --warn: #ffb547; --warn-bg: #3a2a10; --hid: #c99bff; --hid-bg: #2c1b45; --code: #0f1318;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --panel: #171b21; --ink: #e9edf2; --muted: #93a0b0; --line: #2a313b;
+    --accent: #6aa0ff; --ok: #4ad07a; --ok-bg: #12301d; --bad: #ff6b6b; --bad-bg: #3a1618;
+    --warn: #ffb547; --warn-bg: #3a2a10; --hid: #c99bff; --hid-bg: #2c1b45; --code: #0f1318;
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 17px; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.35; }
+  code, pre, .mono { font-family: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; padding: .7rem 1rem;
+           border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+  header h1 { font-size: 1.25rem; margin: 0; letter-spacing: -.01em; }
+  .pill { display: inline-flex; align-items: center; gap: .35rem; padding: .2rem .65rem; border-radius: 999px;
+          border: 1px solid var(--line); font-weight: 600; font-size: .95rem; white-space: nowrap; }
+  .pill.v1 { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
+  .pill.v2 { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
+  .pill.chaos { background: var(--bad-bg); color: var(--bad); border-color: transparent; }
+  .pill.scene { background: var(--code); }
+  .spacer { flex: 1; }
+  .conn { width: .7rem; height: .7rem; border-radius: 50%; background: var(--bad); display: inline-block; }
+  .conn.on { background: var(--ok); }
+
+  .controls { display: flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: center; padding: .55rem 1rem;
+              border-bottom: 1px solid var(--line); font-size: .85rem; color: var(--muted); }
+  .controls .group { display: flex; gap: .3rem; align-items: center; flex-wrap: wrap; }
+  button, select, input { font: inherit; font-size: .85rem; color: var(--ink); background: var(--panel);
+                          border: 1px solid var(--line); border-radius: 6px; padding: .25rem .55rem; }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  input[type=number] { width: 5.5rem; }
+  kbd { font-family: inherit; font-size: .75rem; border: 1px solid var(--line); border-bottom-width: 2px;
+        border-radius: 4px; padding: 0 .3rem; margin-right: .25rem; color: var(--muted); }
+
+  main { display: grid; gap: .8rem; padding: .8rem 1rem 1.5rem;
+         grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+         grid-template-areas: "calls ledger" "calls audit" "tools inspect" "score score"; }
+  @media (max-width: 1000px) {
+    main { grid-template-columns: minmax(0, 1fr);
+           grid-template-areas: "calls" "ledger" "audit" "inspect" "tools" "score"; }
+  }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; min-width: 0;
+            display: flex; flex-direction: column; }
+  section > h2 { font-size: .95rem; margin: 0; padding: .55rem .8rem; border-bottom: 1px solid var(--line);
+                 display: flex; justify-content: space-between; gap: .5rem; text-transform: uppercase;
+                 letter-spacing: .04em; color: var(--muted); }
+  section > h2 b { color: var(--ink); text-transform: none; letter-spacing: 0; }
+  .body { padding: .5rem .8rem; overflow: auto; }
+  #calls { grid-area: calls; } #calls .body { max-height: 72vh; }
+  #ledger { grid-area: ledger; } #ledger .body { max-height: 34vh; }
+  #audit { grid-area: audit; } #audit .body { max-height: 34vh; }
+  #tools { grid-area: tools; } #tools .body { max-height: 46vh; }
+  #inspect { grid-area: inspect; } #inspect .body { max-height: 46vh; }
+  #score { grid-area: score; }
+  .empty { color: var(--muted); font-style: italic; padding: .4rem 0; }
+
+  .call { border: 1px solid var(--line); border-radius: 8px; margin: .45rem 0; overflow: hidden; }
+  .call .top { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .4rem .6rem; }
+  .call .tool { font-weight: 700; font-size: 1.1rem; }
+  .call .meta { color: var(--muted); font-size: .85rem; }
+  .call.err { border-color: var(--bad); }
+  .call.ok { border-color: color-mix(in srgb, var(--ok) 50%, var(--line)); }
+  .status { font-weight: 700; padding: .05rem .45rem; border-radius: 5px; font-size: .85rem; }
+  .status.ok { background: var(--ok-bg); color: var(--ok); }
+  .status.err { background: var(--bad-bg); color: var(--bad); }
+  .status.held { background: var(--warn-bg); color: var(--warn); }
+  .badge { font-size: .75rem; font-weight: 800; padding: .05rem .4rem; border-radius: 4px; letter-spacing: .05em; }
+  .badge.retry { background: var(--warn-bg); color: var(--warn); }
+  .badge.replay { background: var(--ok-bg); color: var(--ok); }
+  .badge.evil { background: var(--hid-bg); color: var(--hid); }
+  .badge.dry { background: var(--code); color: var(--muted); }
+  .call .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); border-top: 1px solid var(--line); }
+  @media (max-width: 700px) { .call .cols { grid-template-columns: minmax(0, 1fr); } }
+  pre { margin: 0; padding: .45rem .6rem; background: var(--code); font-size: .8rem; white-space: pre-wrap;
+        word-break: break-word; max-height: 15rem; overflow: auto; }
+  .call .cols pre + pre { border-left: 1px solid var(--line); }
+  .note { padding: .35rem .6rem; margin: .45rem 0; border-radius: 8px; font-size: .9rem; }
+  .note.chaos { background: var(--bad-bg); color: var(--bad); font-weight: 600; }
+  .note.list { background: var(--code); color: var(--muted); }
+  .divider { margin: .6rem 0 .3rem; font-size: .8rem; color: var(--muted); border-top: 1px dashed var(--line);
+             padding-top: .3rem; text-transform: uppercase; letter-spacing: .05em; }
+
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th, td { text-align: left; padding: .3rem .4rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: .8rem; }
+  th, td:first-child, td.num, td.decision { white-space: nowrap; }
+  td.mono { word-break: break-all; }
+  td.nowrap { white-space: nowrap; }
+  .sub { font-size: .75rem; color: var(--muted); font-weight: 400; }
+  tr.dup .sub { color: inherit; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.dup td { background: var(--bad-bg); color: var(--bad); font-weight: 700; }
+  tr.flash td { animation: flash 0.6s ease-in-out 4; }
+  @keyframes flash { 50% { background: var(--bad); color: #fff; } }
+  .total { font-weight: 700; padding: .3rem .4rem; }
+  .total.bad { color: var(--bad); }
+  .decision { font-weight: 700; }
+  .decision.allowed { color: var(--ok); } .decision.denied { color: var(--bad); } .decision.held { color: var(--warn); }
+  .ctx { color: var(--hid); font-size: .8rem; }
+
+  .toolcard { border: 1px solid var(--line); border-radius: 8px; padding: .45rem .6rem; margin: .4rem 0; }
+  .toolcard.evil { border-color: var(--hid); }
+  .toolcard .name { font-weight: 700; font-family: ui-monospace, Consolas, monospace; }
+  .toolcard .desc { white-space: pre-wrap; font-size: .9rem; margin: .2rem 0; }
+  .toolcard .params { font-size: .8rem; color: var(--muted); font-family: ui-monospace, Consolas, monospace; }
+
+  .uc { border: 1px solid var(--line); border-radius: 8px; padding: .45rem .6rem; margin: .4rem 0; }
+  .uc.poisoned { border-color: var(--hid); }
+  .uc .label { font-size: .8rem; color: var(--muted); margin-bottom: .2rem; }
+  .uc .looks { font-size: 1rem; margin-bottom: .35rem; }
+  .uc .revealed { font-family: ui-monospace, Consolas, monospace; font-size: .85rem; white-space: pre-wrap;
+                  word-break: break-word; background: var(--code); padding: .4rem; border-radius: 6px; }
+  .hid { background: var(--hid-bg); color: var(--hid); border-radius: 3px; padding: 0 .1rem; font-size: .7rem; }
+  .cmt { background: var(--hid-bg); color: var(--hid); }
+  .decoded { margin-top: .35rem; padding: .4rem; border-radius: 6px; background: var(--hid-bg); color: var(--hid);
+             font-weight: 600; font-size: .9rem; }
+
+  .scoregrid td, .scoregrid th { font-size: .95rem; }
+  .scoregrid tr.current td { font-weight: 700; }
+  footer { color: var(--muted); font-size: .8rem; padding: 0 1rem 1rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>ShopCo Agent Demo</h1>
+  <span id="version" class="pill">API ?</span>
+  <span id="agent" class="pill">agent: none yet</span>
+  <span id="scene" class="pill scene">no scene</span>
+  <span id="chaos"></span>
+  <span class="spacer"></span>
+  <span class="pill"><span id="conn" class="conn"></span><span id="connText">connecting</span></span>
+</header>
+
+<div class="controls">
+  <div class="group" id="sceneButtons"></div>
+  <div class="group">
+    <span>API</span>
+    <button data-version="v1">v1</button><button data-version="v2">v2</button>
+  </div>
+  <div class="group">
+    <button id="lose" title="Next refund commits, then returns a timeout"><kbd>L</kbd>lose next response</button>
+  </div>
+  <div class="group">
+    <span>injection</span>
+    <select id="injection">
+      <option>off</option><option>visible</option><option>hidden</option><option>tool-poisoning</option>
+    </select>
+  </div>
+  <div class="group"><span>rate/min</span><input id="rate" type="number" min="1"></div>
+  <div class="group"><span>approval &gt;</span><input id="threshold" type="number" min="0" step="100"><span>¢</span></div>
+  <div class="group">
+    <button id="reset"><kbd>R</kbd>reset</button>
+    <button id="theme"><kbd>T</kbd>theme</button>
+  </div>
+</div>
+
+<main>
+  <section id="calls"><h2>Tool calls <b id="callCount"></b></h2><div class="body"><div class="empty">Waiting for the agent…</div></div></section>
+  <section id="ledger"><h2>Ledger <b id="ledgerTotal"></b></h2><div class="body"><div class="empty">No money has moved.</div></div></section>
+  <section id="audit"><h2>Audit log</h2><div class="body"><div class="empty">No writes yet.</div></div></section>
+  <section id="tools"><h2>What the agent read <b id="toolsMeta"></b></h2><div class="body"><div class="empty">No tools/list yet. Start the agent.</div></div></section>
+  <section id="inspect"><h2>Untrusted content inspector</h2><div class="body"><div class="empty">No customer text read yet.</div></div></section>
+  <section id="score"><h2>Scoreboard</h2><div class="body"></div></section>
+</main>
+<footer>Keys: scene numbers load presets · <kbd>V</kbd>toggle v1/v2 · <kbd>L</kbd>lose next response · <kbd>R</kbd>reset · <kbd>T</kbd>theme. All state lives in the api container.</footer>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = c => (c < 0 ? "-" : "") + "$" + (Math.abs(c) / 100).toFixed(2);
+const time = ts => (ts || "").slice(11, 19);
+
+let settings = {}, scenes = [], currentScene = null;
+let run = newRun(), runs = [];
+let ledgerTotals = {};
+let callsSeen = 0;
+
+function newRun(label) {
+  return { label: label || "warm-up", calls: 0, retries: 0, errors: 0, refunds: 0, moved: 0,
+           denied: 0, held: 0, tokensIn: null, tokensOut: null, agents: new Set(), version: settings.version };
+}
+
+// ---------- theme ----------
+try { const t = localStorage.getItem("shopco-theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+function toggleTheme() {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("shopco-theme", root.dataset.theme); } catch {}
+}
+
+// ---------- API helpers ----------
+async function post(path, body) {
+  const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" },
+                                body: body ? JSON.stringify(body) : undefined });
+  return r.json();
+}
+const setSetting = changes => post("/admin/settings", changes);
+
+// ---------- header + controls ----------
+function renderSettings() {
+  const v = settings.version || "?";
+  const vp = $("#version"); vp.textContent = "API " + v; vp.className = "pill " + v;
+  document.querySelectorAll("[data-version]").forEach(b => b.classList.toggle("active", b.dataset.version === v));
+  $("#lose").classList.toggle("active", !!settings.lose_next_response);
+  $("#injection").value = settings.injection || "off";
+  if (document.activeElement !== $("#rate")) $("#rate").value = settings.rate_limit ?? "";
+  if (document.activeElement !== $("#threshold")) $("#threshold").value = settings.approval_threshold_cents ?? "";
+  const chips = [];
+  if (settings.lose_next_response) chips.push("lose next response");
+  if (settings.injection && settings.injection !== "off") chips.push("injection: " + settings.injection);
+  if (settings.rate_limit && settings.rate_limit < 30) chips.push("rate " + settings.rate_limit + "/min");
+  $("#chaos").innerHTML = chips.map(c => `<span class="pill chaos">⚡ ${esc(c)}</span>`).join(" ");
+  const sc = scenes.find(s => s.id === settings.scene);
+  $("#scene").textContent = sc ? `scene ${sc.number} · ${sc.title}` : "no scene";
+  document.querySelectorAll("[data-scene]").forEach(b => b.classList.toggle("active", b.dataset.scene === settings.scene));
+}
+
+document.querySelectorAll("[data-version]").forEach(b => b.onclick = () => setSetting({ version: b.dataset.version }));
+$("#lose").onclick = () => setSetting({ lose_next_response: !settings.lose_next_response });
+$("#injection").onchange = e => setSetting({ injection: e.target.value });
+$("#rate").onchange = e => setSetting({ rate_limit: parseInt(e.target.value, 10) });
+$("#threshold").onchange = e => setSetting({ approval_threshold_cents: parseInt(e.target.value, 10) });
+$("#reset").onclick = () => post("/admin/reset");
+$("#theme").onclick = toggleTheme;
+
+async function loadScenes() {
+  scenes = await (await fetch("/admin/scenes")).json();
+  $("#sceneButtons").innerHTML = scenes.map(s =>
+    `<button data-scene="${s.id}" title="${esc(s.task)}\n\nExpect: ${esc(s.expect)}"><kbd>${s.key}</kbd>${s.number === s.key ? "" : esc(s.number) + " "}${esc(s.title)}</button>`).join("");
+  document.querySelectorAll("[data-scene]").forEach(b => b.onclick = () => post("/admin/scenes/" + b.dataset.scene));
+  renderSettings();
+}
+
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input, select, textarea") || e.ctrlKey || e.metaKey || e.altKey) return;
+  const sc = scenes.find(s => s.key === e.key);
+  if (sc) return post("/admin/scenes/" + sc.id);
+  const k = e.key.toLowerCase();
+  if (k === "r") post("/admin/reset");
+  else if (k === "v") setSetting({ version: settings.version === "v1" ? "v2" : "v1" });
+  else if (k === "l") setSetting({ lose_next_response: !settings.lose_next_response });
+  else if (k === "t") toggleTheme();
+});
+
+// ---------- panels ----------
+function clearEmpty(sel) { const e = $(sel + " .body .empty"); if (e) e.remove(); }
+function prepend(sel, html) {
+  clearEmpty(sel);
+  const body = $(sel + " .body");
+  body.insertAdjacentHTML("afterbegin", html);
+  return body.firstElementChild;
+}
+function resetPanel(sel, msg) { $(sel + " .body").innerHTML = `<div class="empty">${esc(msg)}</div>`; }
+
+function pretty(v) {
+  if (typeof v === "string") return v;
+  try { return JSON.stringify(v, null, 2); } catch { return String(v); }
+}
+
+function onToolCall(e) {
+  callsSeen++;
+  $("#callCount").textContent = callsSeen + " call" + (callsSeen === 1 ? "" : "s");
+  run.calls++; if (e.retry) run.retries++; if (e.is_error) run.errors++;
+  if (e.agent) { run.agents.add(e.agent); $("#agent").textContent = "agent: " + e.agent; }
+  const held = e.status === 202;
+  const cls = held ? "held" : e.is_error ? "err" : "ok";
+  const statusText = e.status ? "HTTP " + e.status : "error";
+  const badges = [
+    e.retry ? `<span class="badge retry">RETRY ×${e.attempt - 1}</span>` : "",
+    e.replayed ? `<span class="badge replay">IDEMPOTENT REPLAY</span>` : "",
+    e.arguments && e.arguments.dry_run ? `<span class="badge dry">DRY RUN</span>` : "",
+    e.version === "evil" ? `<span class="badge evil">EVIL SERVER</span>` : "",
+  ].join(" ");
+  prepend("#calls", `<div class="call ${e.is_error && !held ? "err" : "ok"}">
+    <div class="top"><span class="tool mono">${esc(e.tool)}</span>
+      <span class="status ${cls}">${statusText}</span> ${badges}
+      <span class="spacer"></span><span class="meta">${esc(e.agent || "")} · ${esc(e.version)} · ${e.latency_ms} ms · ${time(e.ts)}</span></div>
+    <div class="cols"><pre>${esc(pretty(e.arguments))}</pre><pre>${esc(e.result)}</pre></div></div>`);
+  renderScore();
+}
+
+const toolsByServer = {};
+function onToolList(e) {
+  if (e.agent) $("#agent").textContent = "agent: " + e.agent;
+  toolsByServer[e.server] = e;
+  const servers = Object.values(toolsByServer).filter(x => x.tools.length)
+    .sort((x, y) => (x.poisoned ? 1 : 0) - (y.poisoned ? 1 : 0));
+  const main = servers.find(x => !x.poisoned) || e;
+  const total = servers.reduce((n, x) => n + x.tools.length, 0);
+  $("#toolsMeta").textContent = `${total} tools · ${main.version} · ${e.agent || ""}`;
+  const body = $("#tools .body");
+  body.innerHTML = servers.map(x => {
+    const cards = x.tools.map(t => {
+      const props = (t.inputSchema && t.inputSchema.properties) || {};
+      const req = new Set((t.inputSchema && t.inputSchema.required) || []);
+      const params = Object.entries(props).map(([k, s]) => {
+        let ty = s.type || "any";
+        if (s.enum) ty = s.enum.join("|");
+        if (s.pattern) ty += " /" + s.pattern + "/";
+        return `${k}${req.has(k) ? "" : "?"}: ${ty}`;
+      }).join(", ");
+      return `<div class="toolcard ${x.poisoned ? "evil" : ""}"><div class="name">${esc(t.name)}(${esc(params)})</div>
+        <div class="desc">${esc(t.description)}</div></div>`;
+    }).join("");
+    return (servers.length > 1 ? `<div class="divider">server: ${esc(x.server)}</div>` : "") + cards;
+  }).join("") || `<div class="empty">No tools/list yet. Start the agent.</div>`;
+  if (e.tools.length || !e.poisoned)
+    prepend("#calls", `<div class="note list">📋 tools/list → ${e.tools.length} tools served to <b>${esc(e.agent || "agent")}</b> (${esc(e.server)}${e.poisoned ? "" : ", " + esc(e.version)}) · ${time(e.ts)}</div>`);
+}
+
+function onLedger(entry) {
+  clearEmpty("#ledger");
+  const body = $("#ledger .body");
+  let table = body.querySelector("table:last-of-type");
+  if (!table || table.dataset.closed) {
+    body.insertAdjacentHTML("beforeend", `<table><thead><tr><th>time</th><th>order</th><th class="num">amount</th><th class="num">refunded / total</th></tr></thead><tbody></tbody></table>`);
+    table = body.querySelector("table:last-of-type");
+  }
+  const bad = entry.duplicate || entry.over_refunded;
+  table.tBodies[0].insertAdjacentHTML("beforeend", `<tr class="${bad ? "dup flash" : ""}">
+    <td>${time(entry.ts)}</td><td class="nowrap"><span class="mono">${esc(entry.order_id)}</span>
+      <div class="sub" title="${esc(entry.idempotency_key || "")}">${esc(entry.api)} · key ${esc(entry.idempotency_key ? entry.idempotency_key.slice(0, 10) + "…" : "none")}</div></td>
+    <td class="num">${money(entry.amount_cents)}</td>
+    <td class="num">${money(entry.order_refunded_cents)} / ${money(entry.order_total_cents)}${bad ? `<div class="sub">⚠ ${entry.duplicate ? "DUPLICATE" : "OVER-REFUNDED"}</div>` : ""}</td></tr>`);
+  ledgerTotals[entry.order_id] = entry.order_refunded_cents;
+  run.refunds++; run.moved += entry.amount_cents;
+  const total = Object.values(ledgerTotals).reduce((a, b) => a + b, 0);
+  $("#ledgerTotal").textContent = "refunded this run: " + money(total);
+  renderScore();
+}
+
+function onAudit(entry) {
+  clearEmpty("#audit");
+  if (entry.decision === "denied") run.denied++;
+  if (entry.decision === "held") run.held++;
+  const body = $("#audit .body");
+  let table = body.querySelector("table:last-of-type");
+  if (!table || table.dataset.closed) {
+    body.insertAdjacentHTML("beforeend", `<table><thead><tr><th>time</th><th>decision</th><th>endpoint</th><th>reason</th></tr></thead><tbody></tbody></table>`);
+    table = body.querySelector("table:last-of-type");
+  }
+  table.tBodies[0].insertAdjacentHTML("beforeend", `<tr><td>${time(entry.ts)}</td>
+    <td class="decision ${entry.decision}">${esc(entry.decision.toUpperCase())}</td>
+    <td class="mono">${esc(entry.endpoint)}</td>
+    <td>${esc(entry.reason)}${entry.context ? `<div class="ctx">⚠ ${esc(entry.context)}</div>` : ""}
+      <div class="meta" style="color:var(--muted);font-size:.8rem">${esc(entry.token)} · ${esc(entry.agent || "")}</div></td></tr>`);
+  renderScore();
+}
+
+const ZW = { 0x200B: "ZWSP", 0x200C: "ZWNJ", 0x200D: "ZWJ", 0x2060: "WJ", 0xFEFF: "BOM", 0x00AD: "SHY" };
+function reveal(text) {
+  let out = "", decoded = "", hidden = 0;
+  for (const ch of text) {
+    const cp = ch.codePointAt(0);
+    if (cp >= 0xE0000 && cp <= 0xE007F) {
+      hidden++;
+      if (cp >= 0xE0020 && cp <= 0xE007E) decoded += String.fromCharCode(cp - 0xE0000);
+      out += `<span class="hid">⟦U+${cp.toString(16).toUpperCase()}⟧</span>`;
+    } else if (ZW[cp]) {
+      hidden++; out += `<span class="hid">⟦${ZW[cp]}⟧</span>`;
+    } else out += esc(ch);
+  }
+  out = out.replace(/&lt;!--([\s\S]*?)--&gt;/g, m => { hidden++; return `<span class="cmt">${m}</span>`; });
+  return { html: out, decoded, hidden };
+}
+function looksLike(text) {
+  // What a human sees in a normal UI: invisible characters and HTML comments vanish.
+  return [...text].filter(ch => { const cp = ch.codePointAt(0); return !(cp >= 0xE0000 && cp <= 0xE007F) && !ZW[cp]; })
+    .join("").replace(/<!--[\s\S]*?-->/g, "");
+}
+const inspected = new Set();
+function onUntrusted(e) {
+  const key = e.order_id + "|" + e.text;
+  if (inspected.has(key)) return;
+  inspected.add(key);
+  const r = reveal(e.text || "");
+  const flagged = r.hidden > 0 || e.poisoned;
+  prepend("#inspect", `<div class="uc ${flagged ? "poisoned" : ""}">
+    <div class="label"><span class="mono">${esc(e.order_id)}.${esc(e.field)}</span> · read via ${esc(e.api)} by ${esc(e.agent || "agent")} · ${time(e.ts)}
+      ${flagged ? ` · <b style="color:var(--hid)">${r.hidden} hidden element${r.hidden === 1 ? "" : "s"}${e.poisoned ? " · POISONED" : ""}</b>` : ""}</div>
+    <div class="looks">“${esc(looksLike(e.text || ""))}”</div>
+    ${r.decoded ? `<div class="decoded">Decoded tag characters: ${esc(r.decoded)}</div>` : ""}
+    ${r.hidden ? `<div class="revealed">${r.html}</div>` : ""}
+  </div>`);
+}
+
+function onChaos(e) {
+  prepend("#calls", `<div class="note chaos">⚡ Response lost after the ${esc(e.api)} refund on ${esc(e.order_id)} committed. The agent will see a timeout. · ${time(e.ts)}</div>`);
+}
+
+function onRunnerStats(e) {
+  run.tokensIn = (run.tokensIn || 0) + (e.tokens_in || 0);
+  run.tokensOut = (run.tokensOut || 0) + (e.tokens_out || 0);
+  renderScore();
+}
+
+function startRun(label) {
+  if (run.calls || run.refunds || run.denied || run.held) runs.push(run);
+  runs = runs.slice(-8);
+  run = newRun(label);
+  callsSeen = 0; $("#callCount").textContent = "";
+  ledgerTotals = {}; $("#ledgerTotal").textContent = "";
+  inspected.clear();
+  resetPanel("#calls", "Waiting for the agent…");
+  resetPanel("#inspect", "No customer text read yet.");
+  for (const sel of ["#ledger", "#audit"]) {
+    const body = $(sel + " .body");
+    body.querySelectorAll("table").forEach(t => t.dataset.closed = "1");
+    if (body.querySelector("table")) body.insertAdjacentHTML("beforeend", `<div class="divider">${esc(label)}</div>`);
+  }
+  renderScore();
+}
+
+function renderScore() {
+  const rows = [...runs, run].map((r, i, all) => {
+    const cur = i === all.length - 1;
+    return `<tr class="${cur ? "current" : ""}"><td>${esc(r.label)}${cur ? " (now)" : ""}</td><td>${esc(r.version || "")}</td>
+      <td>${esc([...r.agents].join(", "))}</td><td class="num">${r.calls}</td><td class="num">${r.retries}</td>
+      <td class="num">${r.errors}</td><td class="num">${r.refunds}</td><td class="num">${money(r.moved)}</td>
+      <td class="num">${r.denied + r.held}</td>
+      <td class="num">${r.tokensIn == null ? "–" : r.tokensIn.toLocaleString() + " / " + r.tokensOut.toLocaleString()}</td></tr>`;
+  }).join("");
+  $("#score .body").innerHTML = `<table class="scoregrid"><thead><tr><th>run</th><th>api</th><th>agent</th>
+    <th class="num">calls</th><th class="num">retries</th><th class="num">errors</th><th class="num">refunds</th>
+    <th class="num">money moved</th><th class="num">denied/held</th><th class="num">tokens in/out</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// ---------- SSE ----------
+function sceneLabel(s, set) {
+  return s ? `scene ${s.number} · ${s.title} · ${set.version}` : `reset · ${set.version}`;
+}
+function handle(e) {
+  switch (e.type) {
+    case "settings": settings = e.settings; run.version = settings.version; renderSettings(); break;
+    case "reset": settings = e.settings; renderSettings(); startRun(sceneLabel(null, settings)); break;
+    case "scene": settings = e.settings; renderSettings(); startRun(sceneLabel(e.scene, settings)); run.version = settings.version; break;
+    case "tool_list_served": onToolList(e); break;
+    case "tool_call": onToolCall(e); break;
+    case "ledger": onLedger(e.entry); break;
+    case "audit": onAudit(e.entry); break;
+    case "untrusted_content": onUntrusted(e); break;
+    case "chaos": onChaos(e); break;
+    case "runner_stats": onRunnerStats(e); break;
+    case "tools_changed":
+      prepend("#calls", `<div class="note list">🔄 ${esc(e.reason)} (${esc(e.server)}): told ${e.notified.length ? esc(e.notified.join(", ")) : "connected agents"} to reload the tool list · ${time(e.ts)}</div>`);
+      break;
+  }
+}
+
+function connect() {
+  const es = new EventSource("/events");
+  es.addEventListener("hello", m => {
+    settings = JSON.parse(m.data).settings;
+    runs = []; run = newRun("current"); startRun("current");
+    resetPanel("#ledger", "No money has moved."); resetPanel("#audit", "No writes yet.");
+    renderSettings();
+    $("#conn").classList.add("on"); $("#connText").textContent = "live";
+  });
+  es.onmessage = m => handle(JSON.parse(m.data));
+  es.onerror = () => { $("#conn").classList.remove("on"); $("#connText").textContent = "reconnecting"; };
+}
+
+renderScore();
+loadScenes().then(connect);
+</script>
+</body>
+</html>
