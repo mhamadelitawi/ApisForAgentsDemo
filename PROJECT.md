@@ -224,7 +224,9 @@ Panels:
 4. **Untrusted content inspector**: shows `user_content` fields with hidden characters made visible (zero-width and Unicode tag characters rendered as highlighted `⟦U+E0049⟧` style markers, HTML comments expanded).
 5. **Scoreboard**: calls per task, retries, errors, tokens if the runner reports them. Used for the before/after comparison (slide 36).
 
-Header shows: API version (v1/v2), active agent label, chaos toggles that are on.
+Header shows: API version (v1/v2), active agent label, chaos toggles that are on, and a link to the state page.
+
+**State page** (`/state`): a second static page that renders `GET /admin/state` and refetches on every SSE event, so it stays live. It shows customers (orders, spent, refunded), orders (status, total, refunded, left, customer note with hidden characters and HTML comments flagged), the ledger (duplicates in red, idempotency key per entry), approvals waiting for a human, and emails sent. Changed values flash. Use it to show the audience the data before and after a scene.
 
 ### 4.4 Demo controls (`/admin`, plus a small control strip on the dashboard)
 
@@ -348,6 +350,7 @@ ApisForAgents/
     problems.py              # problem+json helpers and the error catalog
     injection.py             # builds visible / hidden / tool-poisoning payloads
     static/dashboard.html    # no build step, no CDN: works offline
+    static/state.html        # live customers / orders / ledger view at /state
   mcp_server/
     server.py                # FastMCP over HTTP, v1 and v2 tool sets
     evil_server.py           # tool-poisoning variant
