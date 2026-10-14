@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShopCo State</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%232f6fde%22/%3E%3Ctext x=%228%22 y=%2212%22 font-size=%2211%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22sans-serif%22%3ES%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #14171c; --muted: #5b6573; --line: #dde1e7;
+    --accent: #2f6fde; --ok: #16803c; --ok-bg: #e5f5ea; --bad: #c62828; --bad-bg: #fdecec;
+    --warn: #a35a00; --warn-bg: #fff3df; --hid: #8a2be2; --hid-bg: #f1e6ff; --code: #f0f2f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216; --panel: #171b21; --ink: #e9edf2; --muted: #93a0b0; --line: #2a313b;
+      --accent: #6aa0ff; --ok: #4ad07a; --ok-bg: #12301d; --bad: #ff6b6b; --bad-bg: #3a1618;
+      --warn: #ffb547; --warn-bg: #3a2a10; --hid: #c99bff; --hid-bg: #2c1b45; --code: #0f1318;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --panel: #171b21; --ink: #e9edf2; --muted: #93a0b0; --line: #2a313b;
+    --accent: #6aa0ff; --ok: #4ad07a; --ok-bg: #12301d; --bad: #ff6b6b; --bad-bg: #3a1618;
+    --warn: #ffb547; --warn-bg: #3a2a10; --hid: #c99bff; --hid-bg: #2c1b45; --code: #0f1318;
+  }
+  * { box-sizing: border-box; }
+  html { font-size: 18px; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.35; }
+  .mono { font-family: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; padding: .7rem 1rem;
+           border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+  header h1 { font-size: 1.25rem; margin: 0; letter-spacing: -.01em; }
+  .pill { display: inline-flex; align-items: center; gap: .35rem; padding: .2rem .65rem; border-radius: 999px;
+          border: 1px solid var(--line); font-weight: 600; font-size: .9rem; white-space: nowrap; }
+  .pill.v1 { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
+  .pill.v2 { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
+  .pill.chaos { background: var(--bad-bg); color: var(--bad); border-color: transparent; }
+  .spacer { flex: 1; }
+  .conn { width: .7rem; height: .7rem; border-radius: 50%; background: var(--bad); display: inline-block; }
+  .conn.on { background: var(--ok); }
+  a, button { font: inherit; font-size: .85rem; color: var(--ink); background: var(--panel); text-decoration: none;
+              border: 1px solid var(--line); border-radius: 6px; padding: .25rem .55rem; cursor: pointer; }
+  a:hover, button:hover { border-color: var(--accent); }
+  kbd { font-family: inherit; font-size: .75rem; border: 1px solid var(--line); border-bottom-width: 2px;
+        border-radius: 4px; padding: 0 .3rem; margin-right: .25rem; color: var(--muted); }
+
+  main { display: grid; gap: .8rem; padding: .8rem 1rem 1.5rem;
+         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+         grid-template-areas: "customers customers" "orders orders" "ledger ledger" "approvals emails"; }
+  @media (max-width: 900px) {
+    main { grid-template-columns: minmax(0, 1fr);
+           grid-template-areas: "customers" "orders" "ledger" "approvals" "emails"; }
+  }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+  section > h2 { font-size: .95rem; margin: 0; padding: .55rem .8rem; border-bottom: 1px solid var(--line);
+                 display: flex; justify-content: space-between; gap: .5rem; text-transform: uppercase;
+                 letter-spacing: .04em; color: var(--muted); }
+  section > h2 b { color: var(--ink); text-transform: none; letter-spacing: 0; }
+  .body { padding: .5rem .8rem; overflow-x: auto; }
+  #customers { grid-area: customers; } #orders { grid-area: orders; } #ledger { grid-area: ledger; }
+  #approvals { grid-area: approvals; } #emails { grid-area: emails; }
+  .empty { color: var(--muted); font-style: italic; padding: .4rem 0; }
+
+  .cards { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: .6rem .75rem; }
+  .card .name { font-weight: 700; font-size: 1.15rem; }
+  .card .meta { color: var(--muted); font-size: .85rem; }
+  .card .stats { display: flex; gap: 1.2rem; margin-top: .45rem; }
+  .card .stats div { font-size: .8rem; color: var(--muted); }
+  .card .stats b { display: block; font-size: 1.15rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  th, td { text-align: left; padding: .4rem .45rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { color: var(--muted); font-weight: 600; font-size: .8rem; white-space: nowrap; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.nowrap { white-space: nowrap; }
+  .sub { font-size: .78rem; color: var(--muted); }
+  .status { font-weight: 700; padding: .08rem .5rem; border-radius: 5px; font-size: .85rem; white-space: nowrap; }
+  .status.delivered, .status.paid { background: var(--code); color: var(--ink); }
+  .status.pending { background: var(--warn-bg); color: var(--warn); }
+  .status.refunded { background: var(--ok-bg); color: var(--ok); }
+  .status.cancelled { background: var(--code); color: var(--muted); }
+  .status.over { background: var(--bad-bg); color: var(--bad); }
+  .bar { width: 7rem; height: .5rem; border-radius: 999px; background: var(--code); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--ok); }
+  .bar.over i { background: var(--bad); }
+  .note { max-width: 22rem; font-size: .85rem; }
+  .flag { font-size: .72rem; font-weight: 800; padding: .05rem .4rem; border-radius: 4px; letter-spacing: .04em;
+          background: var(--hid-bg); color: var(--hid); white-space: nowrap; }
+  .flag.bad { background: var(--bad-bg); color: var(--bad); }
+  tr.dup td { background: var(--bad-bg); color: var(--bad); font-weight: 700; }
+  tr.dup .sub { color: inherit; }
+  .changed { animation: changed 1.4s ease-out 1; }
+  @keyframes changed { 0% { background: var(--warn-bg); } 100% { background: transparent; } }
+  .total { font-weight: 700; padding: .45rem .45rem 0; text-align: right; }
+  .total.bad { color: var(--bad); }
+  .email { border: 1px solid var(--line); border-radius: 8px; padding: .45rem .6rem; margin: .4rem 0; }
+  .email .subj { font-weight: 700; }
+  .email .text { white-space: pre-wrap; font-size: .85rem; color: var(--muted); margin-top: .2rem; }
+  footer { color: var(--muted); font-size: .8rem; padding: 0 1rem 1rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>ShopCo State</h1>
+  <span id="version" class="pill">API ?</span>
+  <span id="chaos"></span>
+  <span class="spacer"></span>
+  <span class="pill"><span id="conn" class="conn"></span><span id="connText">connecting</span></span>
+  <a href="/">Dashboard</a>
+  <button id="theme"><kbd>T</kbd>theme</button>
+</header>
+
+<main>
+  <section id="customers"><h2>Customers <b id="custCount"></b></h2><div class="body"></div></section>
+  <section id="orders"><h2>Orders <b id="orderTotals"></b></h2><div class="body"></div></section>
+  <section id="ledger"><h2>Ledger <b id="ledgerTotal"></b></h2><div class="body"></div></section>
+  <section id="approvals"><h2>Waiting for approval <b id="apprCount"></b></h2><div class="body"></div></section>
+  <section id="emails"><h2>Emails sent <b id="emailCount"></b></h2><div class="body"></div></section>
+</main>
+<footer>Live view of <span class="mono">/admin/state</span>. Updates on every API event. Reset from the dashboard (<kbd>R</kbd>).</footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const money = c => (c < 0 ? "-" : "") + "$" + (Math.abs(c) / 100).toFixed(2);
+const time = ts => ts ? new Date(ts).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit", second: "2-digit"}) : "";
+// Unicode tag characters and zero-width characters: what the hidden injection uses.
+const HIDDEN = /[\u{E0000}-\u{E007F}​-‏⁠-⁤﻿]/gu;
+
+// ---------- theme ----------
+try { const t = localStorage.getItem("shopco-theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+function toggleTheme() {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("shopco-theme", root.dataset.theme); } catch {}
+}
+$("#theme").onclick = toggleTheme;
+document.addEventListener("keydown", e => { if ((e.key === "t" || e.key === "T") && !e.ctrlKey && !e.metaKey) toggleTheme(); });
+
+// ---------- render ----------
+let prev = {};   // cell key -> last rendered value, to highlight what changed
+
+function cell(key, value, html, cls = "") {
+  const changed = key in prev && prev[key] !== value;
+  prev[key] = value;
+  return `<td class="${cls}${changed ? " changed" : ""}">${html}</td>`;
+}
+
+function renderHeader(s) {
+  const v = $("#version");
+  v.textContent = "API " + s.version;
+  v.className = "pill " + s.version;
+  const chaos = [];
+  if (s.lose_next_response) chaos.push("lose next response");
+  if (s.injection && s.injection !== "off") chaos.push("injection: " + s.injection);
+  $("#chaos").innerHTML = chaos.map(c => `<span class="pill chaos">${esc(c)}</span>`).join(" ");
+}
+
+function renderCustomers(data) {
+  $("#custCount").textContent = data.customers.length;
+  $("#customers .body").innerHTML = `<div class="cards">` + data.customers.map(c => {
+    const orders = data.orders.filter(o => o.customer_id === c.customer_id);
+    const spent = orders.reduce((a, o) => a + o.total_cents, 0);
+    const refunded = orders.reduce((a, o) => a + o.refunded_cents, 0);
+    return `<div class="card">
+      <div class="name">${esc(c.name)}</div>
+      <div class="meta"><span class="mono">${esc(c.customer_id)}</span> · ${esc(c.email)}</div>
+      <div class="stats">
+        <div>Orders<b>${orders.length}</b></div>
+        <div>Spent<b>${money(spent)}</b></div>
+        <div>Refunded<b>${money(refunded)}</b></div>
+      </div></div>`;
+  }).join("") + `</div>`;
+}
+
+function renderOrders(data) {
+  const names = Object.fromEntries(data.customers.map(c => [c.customer_id, c.name]));
+  const refunded = data.orders.reduce((a, o) => a + o.refunded_cents, 0);
+  $("#orderTotals").textContent = `${data.orders.length} orders · ${money(refunded)} refunded`;
+  const rows = data.orders.map(o => {
+    const id = o.order_id, left = o.total_cents - o.refunded_cents;
+    const over = o.refunded_cents > o.total_cents;
+    const pct = Math.min(100, o.total_cents ? 100 * o.refunded_cents / o.total_cents : 0);
+    const items = (o.items || []).map(i => `${i.qty > 1 ? i.qty + "× " : ""}${esc(i.name)}`).join(", ");
+    const note = o.customer_note || "";
+    const hidden = (note.match(HIDDEN) || []).length;
+    const visible = note.replace(HIDDEN, "");
+    const flags = (hidden ? `<span class="flag">${hidden} hidden chars</span> ` : "")
+                + (/<!--/.test(note) ? `<span class="flag">HTML comment</span> ` : "");
+    return `<tr>
+      <td class="nowrap"><b class="mono">${esc(id)}</b><div class="sub">${o.created_at ? new Date(o.created_at).toLocaleDateString() : ""}</div></td>
+      <td class="nowrap">${esc(names[o.customer_id] || o.customer_id)}<div class="sub mono">${esc(o.customer_id)}</div></td>
+      <td>${items}</td>
+      ${cell(id + ":status", o.status + over, `<span class="status ${over ? "over" : esc(o.status)}">${over ? "over-refunded" : esc(o.status)}</span>`)}
+      <td class="num">${money(o.total_cents)}</td>
+      ${cell(id + ":refunded", o.refunded_cents, money(o.refunded_cents), "num")}
+      ${cell(id + ":left", left, money(left), "num")}
+      <td><div class="bar${over ? " over" : ""}"><i style="width:${pct}%"></i></div></td>
+      ${cell(id + ":note", note, `<div class="note">${flags}${esc(visible.length > 140 ? visible.slice(0, 140) + "…" : visible)}</div>`)}
+    </tr>`;
+  }).join("");
+  $("#orders .body").innerHTML = `<table>
+    <tr><th>Order</th><th>Customer</th><th>Items</th><th>Status</th><th class="num">Total</th>
+        <th class="num">Refunded</th><th class="num">Left</th><th></th><th>Customer note</th></tr>${rows}</table>`;
+}
+
+function renderLedger(data) {
+  const total = data.ledger.reduce((a, e) => a + e.amount_cents, 0);
+  const dups = data.ledger.filter(e => e.duplicate).length;
+  $("#ledgerTotal").textContent = data.ledger.length ? `${money(total)} moved${dups ? ` · ${dups} duplicate` : ""}` : "";
+  if (!data.ledger.length) { $("#ledger .body").innerHTML = `<div class="empty">No money has moved.</div>`; return; }
+  const rows = data.ledger.map(e => `<tr class="${e.duplicate || e.over_refunded ? "dup" : ""}">
+      <td class="nowrap mono">${esc(e.ledger_id)}<div class="sub">${time(e.ts)}</div></td>
+      <td class="mono">${esc(e.order_id)}</td>
+      <td>${esc(e.kind)}${e.duplicate ? ` <span class="flag bad">DUPLICATE</span>` : ""}</td>
+      <td class="num">${money(e.amount_cents)}</td>
+      <td class="num">${money(e.order_refunded_cents)} <span class="sub">of ${money(e.order_total_cents)}</span></td>
+      <td>${esc(e.api)}<div class="sub">${esc(e.agent || e.token || "")}</div></td>
+      <td class="mono sub">${esc(e.idempotency_key || "no key")}</td>
+    </tr>`).join("");
+  $("#ledger .body").innerHTML = `<table>
+    <tr><th>Entry</th><th>Order</th><th>Kind</th><th class="num">Amount</th><th class="num">Order refunded</th>
+        <th>Via</th><th>Idempotency key</th></tr>${rows}</table>
+    <div class="total${dups ? " bad" : ""}">Total moved: ${money(total)}</div>`;
+}
+
+function renderApprovals(data) {
+  const list = data.approvals || [];
+  $("#apprCount").textContent = list.length || "";
+  $("#approvals .body").innerHTML = list.length ? `<table>
+    <tr><th>Approval</th><th>Order</th><th class="num">Amount</th><th>Reason</th><th>Status</th></tr>` +
+    list.map(a => `<tr><td class="mono">${esc(a.approval_id)}</td><td class="mono">${esc(a.order_id)}</td>
+      <td class="num">${money(a.amount_cents)}</td><td>${esc(a.reason)}</td><td>${esc(a.status)}</td></tr>`).join("") +
+    `</table>` : `<div class="empty">Nothing waiting for a human.</div>`;
+}
+
+function renderEmails(data) {
+  const list = data.emails || [];
+  $("#emailCount").textContent = list.length || "";
+  $("#emails .body").innerHTML = list.length ? list.map(m => `<div class="email">
+      <div class="sub">to <b>${esc(m.to)}</b> · <span class="mono">${esc(m.order_id)}</span></div>
+      <div class="subj">${esc(m.subject)}</div><div class="text">${esc(m.body)}</div></div>`).join("")
+    : `<div class="empty">No emails sent.</div>`;
+}
+
+async function refresh() {
+  try {
+    const data = await (await fetch("/admin/state", {cache: "no-store"})).json();
+    renderHeader(data.settings);
+    renderCustomers(data);
+    renderOrders(data);
+    renderLedger(data);
+    renderApprovals(data);
+    renderEmails(data);
+  } catch (err) { console.error(err); }
+}
+
+// ---------- live updates: refetch whenever the API emits an event ----------
+let timer = null;
+const soon = () => { clearTimeout(timer); timer = setTimeout(refresh, 120); };
+function connect() {
+  const es = new EventSource("/events");
+  es.onopen = () => { $("#conn").classList.add("on"); $("#connText").textContent = "live"; soon(); };
+  es.onmessage = soon;
+  es.addEventListener("hello", soon);
+  es.onerror = () => { $("#conn").classList.remove("on"); $("#connText").textContent = "reconnecting"; };
+}
+refresh();
+connect();
+</script>
+</body>
+</html>
