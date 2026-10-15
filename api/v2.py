@@ -232,7 +232,7 @@ async def send_email(request: Request):
     if to != customer["email"]:
         state.add_audit(token_label=caller.label, agent=caller.agent, token=caller.token,
                         endpoint="POST /v2/emails", decision="denied",
-                        reason=f"recipient {to} is not the order's customer", order_id=order_id)
+                        reason=f"recipient {to} is not the order's customer", order_id=order_id, payload=body)
         raise Problem("recipient-not-allowed", "Emails can only go to the order's own customer.",
                       next_action="Omit 'to'; the email is sent to the customer on file.")
     email = {"to": to, "order_id": order_id, "subject": body.get("subject", ""), "body": body.get("body", "")}

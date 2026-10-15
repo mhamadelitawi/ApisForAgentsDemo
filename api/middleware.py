@@ -78,7 +78,8 @@ def require_scope(request: Request, caller: Caller, scope: str, order_id: str | 
         return
     state.add_audit(token_label=caller.label, agent=caller.agent, token=caller.token,
                     endpoint=f"{request.method} {request.url.path}", decision="denied",
-                    reason=f"missing scope {scope}", order_id=order_id)
+                    reason=f"missing scope {scope}", order_id=order_id,
+                    payload=getattr(request.state, "req_body", None))
     raise Problem("insufficient-scope", f"This token does not have the {scope} scope.",
                   next_action=f"Do not retry. Tell the user this action needs a human with {scope}.",
                   missing_scope=scope, token_scopes=sorted(caller.scopes))
