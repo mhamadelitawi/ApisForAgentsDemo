@@ -63,6 +63,8 @@ Press the key on the dashboard (or click the button) to load a preset, then give
 
 To show the data itself, open the **State** page (button in the dashboard header, or http://localhost:8800/state). It updates live as the agent works; the raw JSON is at http://localhost:8800/admin/state.
 
+Scene 5: v1 reads are stale for 60 s after a lost response, so an agent that checks the order before retrying still sees "not refunded" and refunds twice. Checking first is no substitute for idempotency.
+
 Other keys: `V` toggle v1/v2, `L` lose next response, `R` reset, `T` theme.
 
 Switching v1/v2 needs no restart: the MCP server sends `notifications/tools/list_changed` and Claude Code reloads its tools within a second (the dashboard logs it). If a client misses it, reconnect with `/mcp`.

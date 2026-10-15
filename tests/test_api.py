@@ -1,5 +1,7 @@
 """API behavior the scenes depend on: idempotency, scopes, errors, rate limit, v1 traps."""
 
+import time
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -156,6 +158,31 @@ def test_v1_lost_response_retry_refunds_twice(client):
     assert act(client, id="ord_8842", action="rf", amt=129, flag=True).status_code == 200
     assert len(state.ledger) == 2 and state.ledger[1]["duplicate"]
     assert state.orders["ord_8842"]["refunded_cents"] == 25800
+
+
+def test_v1_lost_response_then_check_shows_stale_order(client):
+    state.update_settings(lose_next_response=True)
+    assert act(client, id="ord_8842", action="rf", amt=129, flag=True).status_code == 504
+    seen = client.get("/v1/orders/ord_8842", headers=AGENT).json()
+    assert seen["st"] == "DLV" and seen["amt_ref"] == 0          # the agent's check says "not refunded"
+    assert act(client, id="ord_8842", action="rf", amt=129, flag=True).status_code == 200
+    assert len(state.ledger) == 2 and state.ledger[1]["duplicate"]
+    seen = client.get("/v1/orders/ord_8842", headers=AGENT).json()
+    assert seen["st"] == "RFD" and seen["amt_ref"] == 25800      # cache caught up after the retry
+
+
+def test_v1_stale_read_expires(client, monkeypatch):
+    state.update_settings(lose_next_response=True)
+    act(client, id="ord_8842", action="rf", amt=129, flag=True)
+    real = time.monotonic
+    monkeypatch.setattr(time, "monotonic", lambda: real() + 61)
+    assert client.get("/v1/orders/ord_8842", headers=AGENT).json()["amt_ref"] == 12900
+
+
+def test_v2_reads_are_fresh_after_lost_response(client):
+    state.update_settings(lose_next_response=True)
+    assert refund(client, "ord_8842", 12900).status_code == 504
+    assert client.get("/v2/orders/ord_8842", headers=AGENT).json()["refunded_cents"] == 12900
 
 
 def test_v1_get_is_noisy(client):

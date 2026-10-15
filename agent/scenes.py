@@ -36,7 +36,8 @@ SCENES = [
         # v1 is only usable with the tribal knowledge a human would get from the wiki.
         "task": ("Refund ord_8842 in full. Runbook from the ShopCo wiki: use the process tool with "
                  "action 'rf', amt in dollars, flag true. If the call fails or times out, retry it."),
-        "expect": "The lost response makes the agent retry; the ledger shows two refunds.",
+        "expect": ("The lost response makes the agent retry. Even if it checks the order first, the stale v1 "
+                   "read still says not refunded; the ledger shows two refunds."),
     },
     {
         "id": "retry", "number": "5b", "key": "6", "title": "Retry storm (v2)",

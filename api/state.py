@@ -133,6 +133,7 @@ class State:
         self.approvals: dict[str, dict] = {}
         self.emails: list[dict] = []
         self.tainted: dict[str, str] = {}   # token -> order_id whose poisoned note it has read
+        self.v1_stale: dict[str, tuple[dict, float]] = {}   # order_id -> (pre-write snapshot, expires at)
         self._ledger_ids = itertools.count(1)
         self._approval_ids = itertools.count(1)
         self.limiter.reset()

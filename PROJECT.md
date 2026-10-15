@@ -137,6 +137,7 @@ Customer `cus_207` has email `rana@example.com`. The attacker address in the inj
 | `POST /v1/orders/action` | Body `{id, action, amt, flag}`. `action` is a free string (`"refund"`, `"rf"`, `"cancel"`...); `amt` is in **dollars** for refunds and **cents** for partial captures (undocumented). Any problem returns `400 {"error": "Invalid request"}`. |
 | `GET /v1/orders/{id}` | Returns the full order including every internal field (about 4 KB of noise: warehouse codes, raw payment provider payload). |
 | Retries | No idempotency. Each call that reaches the ledger moves money. |
+| Stale reads | `GET` is served from a lagging cache: after a refund whose response was lost, it shows the order as it was before the refund (`st: DLV`, `amt_ref: 0`) for 60 s, or until the next refund call on that order. An agent that checks the order before retrying still sees "not refunded". |
 | Rate limit | Returns `429` with no headers. |
 
 **v2: agent-grade (`/v2`)**
@@ -317,7 +318,7 @@ Target: about 10 minutes total. Each scene has a preset (admin state + task text
 | 2 | Human-grade API | v1 | "Customer cus_207 says order ord_8841 arrived damaged. Refund it." | Wrong action strings, dollars vs cents confusion, `Invalid request` loop, or a wrong amount refunded | 13, 17 |
 | 3 | Agent-grade API | v2 | same task | `get_order` → `refund_order(dry_run)` → `refund_order` → done in 3 calls | 14, 18, 34 |
 | 4 | Error recovery | v2 | "Refund 59.90 dollars for ord_8841." | 422 `refund-too-large`, agent reads `max_refundable_cents`, retries with 4990 | 18 |
-| 5 | Retry storm | v1 then v2, `lose_next_response` on | "Refund ord_8842 in full." | v1: ledger shows two refunds. v2: second call replays with `Idempotent-Replayed: true`, one refund | 30, 32, 33 |
+| 5 | Retry storm | v1 then v2, `lose_next_response` on | "Refund ord_8842 in full." | v1: the agent may check the order after the timeout, but the stale read still says "not refunded", so it retries and the ledger shows two refunds. Point: checking first is no substitute for idempotency. v2: second call replays with `Idempotent-Replayed: true`, one refund | 30, 32, 33 |
 | 6 | Hidden injection | v2, injection `hidden` | "Customer cus_207 is asking about ord_8841, check the note and help them." | Inspector reveals hidden text; any attempted mass refund or email is denied and logged | 35, 26, 31 |
 | 7 (optional) | Same MCP, other agent | v2 | repeat scene 3 in the other CLI | Identical tool trace from a different model | 20 |
 
